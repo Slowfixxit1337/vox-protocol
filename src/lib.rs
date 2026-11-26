@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 pub const MAJOR: u16 = 1;
 pub const MINOR: u16 = 0;
 pub const CAP_FRAME_E2EE: u64 = 1;
+pub const CAP_SFU_TRANSPORT: u64 = 1 << 1;
 pub const HEADER_LEN: usize = 19;
 pub const MAX_PAYLOAD: usize = 256 * 1024;
 pub const MAX_FRAME: usize = HEADER_LEN + MAX_PAYLOAD;
@@ -52,6 +53,9 @@ messages! {
     7 => IceCandidate { generation: u64, mid: String, candidate: String },
     8 => TrackEnded { track: Track },
     9 => ProtocolError { code: ErrorCode },
+    10 => AttachMedia { ticket: String, offer: SdpOffer },
+    11 => GetTransportState { generation: u64 },
+    12 => TransportState { generation: u64, connected: bool },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -79,10 +83,18 @@ pub enum ErrorCode {
 }
 
 pub fn negotiate(major: u16, hello: &ClientHello) -> Result<ServerHello, WireError> {
+    negotiate_with(major, hello, CAP_FRAME_E2EE | CAP_SFU_TRANSPORT)
+}
+
+pub fn negotiate_with(
+    major: u16,
+    hello: &ClientHello,
+    supported: u64,
+) -> Result<ServerHello, WireError> {
     if major != MAJOR || hello.min_minor > hello.max_minor || hello.min_minor > MINOR {
         return Err(WireError::UnsupportedVersion);
     }
-    let capabilities = hello.capabilities & CAP_FRAME_E2EE;
+    let capabilities = hello.capabilities & supported;
     if capabilities & CAP_FRAME_E2EE == 0 || hello.required & !capabilities != 0 {
         return Err(WireError::UnsupportedFeature);
     }
