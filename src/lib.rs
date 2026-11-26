@@ -1,10 +1,12 @@
 //! The public signaling contract. Media keys never appear on this wire.
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
+pub mod auth;
 
 pub const MAJOR: u16 = 1;
 pub const MINOR: u16 = 0;
 pub const CAP_FRAME_E2EE: u64 = 1;
 pub const CAP_SFU_TRANSPORT: u64 = 1 << 1;
+pub const CAP_AUTH: u64 = 1 << 2;
 pub const HEADER_LEN: usize = 19;
 pub const MAX_PAYLOAD: usize = 256 * 1024;
 pub const MAX_FRAME: usize = HEADER_LEN + MAX_PAYLOAD;
@@ -38,7 +40,7 @@ macro_rules! messages {
             impl Message for $name { const KIND: u16 = $kind; }
         )+
         fn known(kind: u16) -> bool {
-            [$($kind),+].contains(&kind)
+            [$($kind),+].contains(&kind) || matches!(kind, auth::AuthRequest::KIND | auth::AuthReply::KIND)
         }
     };
 }
