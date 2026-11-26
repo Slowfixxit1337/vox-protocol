@@ -37,7 +37,7 @@ macro_rules! messages {
             impl Message for $name { const KIND: u16 = $kind; }
         )+
         fn known(kind: u16) -> bool {
-            matches!(kind, $($kind)|+)
+            [$($kind),+].contains(&kind)
         }
     };
 }
