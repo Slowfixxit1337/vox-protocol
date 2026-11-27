@@ -7,6 +7,7 @@ pub const MINOR: u16 = 0;
 pub const CAP_FRAME_E2EE: u64 = 1;
 pub const CAP_SFU_TRANSPORT: u64 = 1 << 1;
 pub const CAP_AUTH: u64 = 1 << 2;
+pub const CAP_PASSWORD_RESET: u64 = 1 << 3;
 pub const HEADER_LEN: usize = 19;
 pub const MAX_PAYLOAD: usize = 256 * 1024;
 pub const MAX_FRAME: usize = HEADER_LEN + MAX_PAYLOAD;

@@ -37,6 +37,22 @@ pub enum Operation {
     SignOut {
         session: String,
     },
+    RequestPasswordReset {
+        email: String,
+    },
+    ResetPassword {
+        token: String,
+        password: String,
+    },
+}
+
+impl Operation {
+    pub fn requires_password_reset(&self) -> bool {
+        matches!(
+            self,
+            Self::RequestPasswordReset { .. } | Self::ResetPassword { .. }
+        )
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -66,6 +82,8 @@ pub enum Outcome {
         code: AuthError,
         retry_after_seconds: u32,
     },
+    PasswordResetRequested,
+    PasswordReset,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

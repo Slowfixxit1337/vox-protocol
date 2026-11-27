@@ -33,3 +33,24 @@ fn auth_capability_and_operations_round_trip() {
     assert_eq!((decoded.kind, decoded.request_id), (14, 2));
     assert!(decoded.body::<AuthReply>().unwrap() == reply);
 }
+#[test]
+fn password_reset_requires_negotiation_and_round_trips() {
+    use vox_protocol::CAP_PASSWORD_RESET;
+    let supported = CAP_AUTH | CAP_FRAME_E2EE;
+    let hello = ClientHello {
+        min_minor: 0,
+        max_minor: 0,
+        capabilities: supported | CAP_PASSWORD_RESET,
+        required: supported | CAP_PASSWORD_RESET,
+    };
+    assert!(negotiate_with(MAJOR, &hello, supported).is_err());
+    assert!(negotiate_with(MAJOR, &hello, hello.capabilities).is_ok());
+    let request = AuthRequest {
+        operation: Operation::ResetPassword {
+            token: "synthetic token".into(),
+            password: "synthetic password".into(),
+        },
+    };
+    let bytes = encode(0, 9, &request).unwrap();
+    assert!(decode(&bytes).unwrap().body::<AuthRequest>().unwrap() == request);
+}
