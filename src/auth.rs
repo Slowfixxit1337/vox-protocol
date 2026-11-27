@@ -1,7 +1,7 @@
 //! Account operations on `/v1/auth`, after a successful Hello over TLS.
 //!
 //! These messages intentionally omit Debug because they carry credentials.
-use crate::Message;
+use crate::{CAP_CHANGE_PASSWORD, CAP_PASSWORD_RESET, Message};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,14 +44,20 @@ pub enum Operation {
         token: String,
         password: String,
     },
+    ChangePassword {
+        session: String,
+        current_password: String,
+        new_password: String,
+    },
 }
 
 impl Operation {
-    pub fn requires_password_reset(&self) -> bool {
-        matches!(
-            self,
-            Self::RequestPasswordReset { .. } | Self::ResetPassword { .. }
-        )
+    pub fn required_capability(&self) -> u64 {
+        match self {
+            Self::RequestPasswordReset { .. } | Self::ResetPassword { .. } => CAP_PASSWORD_RESET,
+            Self::ChangePassword { .. } => CAP_CHANGE_PASSWORD,
+            _ => 0,
+        }
     }
 }
 
@@ -84,6 +90,7 @@ pub enum Outcome {
     },
     PasswordResetRequested,
     PasswordReset,
+    PasswordChanged,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

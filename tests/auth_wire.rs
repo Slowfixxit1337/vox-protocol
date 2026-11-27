@@ -54,3 +54,30 @@ fn password_reset_requires_negotiation_and_round_trips() {
     let bytes = encode(0, 9, &request).unwrap();
     assert!(decode(&bytes).unwrap().body::<AuthRequest>().unwrap() == request);
 }
+#[test]
+fn change_password_requires_its_own_capability() {
+    use vox_protocol::{CAP_CHANGE_PASSWORD, CAP_PASSWORD_RESET};
+    let old = CAP_AUTH | CAP_FRAME_E2EE | CAP_PASSWORD_RESET;
+    let operation = Operation::ChangePassword {
+        session: "synthetic session".into(),
+        current_password: "old password".into(),
+        new_password: "new password".into(),
+    };
+    assert_eq!(operation.required_capability(), CAP_CHANGE_PASSWORD);
+    let hello = ClientHello {
+        min_minor: 0,
+        max_minor: 0,
+        capabilities: old | CAP_CHANGE_PASSWORD,
+        required: old | CAP_CHANGE_PASSWORD,
+    };
+    assert!(negotiate_with(MAJOR, &hello, old).is_err());
+    assert!(negotiate_with(MAJOR, &hello, hello.capabilities).is_ok());
+    let request = AuthRequest { operation };
+    assert!(
+        decode(&encode(0, 4, &request).unwrap())
+            .unwrap()
+            .body::<AuthRequest>()
+            .unwrap()
+            == request
+    );
+}
