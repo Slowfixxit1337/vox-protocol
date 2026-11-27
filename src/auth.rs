@@ -1,7 +1,7 @@
 //! Account operations on `/v1/auth`, after a successful Hello over TLS.
 //!
 //! These messages intentionally omit Debug because they carry credentials.
-use crate::{CAP_CHANGE_PASSWORD, CAP_PASSWORD_RESET, Message};
+use crate::{CAP_CHANGE_PASSWORD, CAP_PASSWORD_RESET, CAP_TWO_FACTOR, Message};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -49,6 +49,18 @@ pub enum Operation {
         current_password: String,
         new_password: String,
     },
+    BeginTwoFactor {
+        session: String,
+        password: String,
+    },
+    ConfirmTwoFactor {
+        session: String,
+        code: String,
+    },
+    CompleteTwoFactorSignIn {
+        challenge: String,
+        code: String,
+    },
 }
 
 impl Operation {
@@ -56,6 +68,9 @@ impl Operation {
         match self {
             Self::RequestPasswordReset { .. } | Self::ResetPassword { .. } => CAP_PASSWORD_RESET,
             Self::ChangePassword { .. } => CAP_CHANGE_PASSWORD,
+            Self::BeginTwoFactor { .. }
+            | Self::ConfirmTwoFactor { .. }
+            | Self::CompleteTwoFactorSignIn { .. } => CAP_TWO_FACTOR,
             _ => 0,
         }
     }
@@ -91,6 +106,17 @@ pub enum Outcome {
     PasswordResetRequested,
     PasswordReset,
     PasswordChanged,
+    TwoFactorSetup {
+        secret: String,
+        expires_in_seconds: u32,
+    },
+    TwoFactorEnabled {
+        backup_codes: Vec<String>,
+    },
+    TwoFactorRequired {
+        challenge: String,
+        expires_in_seconds: u32,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,4 +129,5 @@ pub enum AuthError {
     RateLimited,
     SessionExpired,
     Unavailable,
+    TwoFactorAlreadyEnabled,
 }

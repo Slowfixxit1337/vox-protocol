@@ -81,3 +81,25 @@ fn change_password_requires_its_own_capability() {
             == request
     );
 }
+#[test]
+fn two_factor_challenge_round_trips_without_a_session() {
+    use vox_protocol::CAP_TWO_FACTOR;
+    let operation = Operation::CompleteTwoFactorSignIn {
+        challenge: "synthetic challenge".into(),
+        code: "123456".into(),
+    };
+    assert_eq!(operation.required_capability(), CAP_TWO_FACTOR);
+    let reply = AuthReply {
+        outcome: Outcome::TwoFactorRequired {
+            challenge: "synthetic challenge".into(),
+            expires_in_seconds: 300,
+        },
+    };
+    assert!(
+        decode(&encode(0, 2, &reply).unwrap())
+            .unwrap()
+            .body::<AuthReply>()
+            .unwrap()
+            == reply
+    );
+}
