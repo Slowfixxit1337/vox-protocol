@@ -11,6 +11,7 @@ pub const CAP_PASSWORD_RESET: u64 = 1 << 3;
 pub const CAP_CHANGE_PASSWORD: u64 = 1 << 4;
 pub const CAP_TWO_FACTOR: u64 = 1 << 5;
 pub const CAP_TWO_FACTOR_MANAGE: u64 = 1 << 6;
+pub const CAP_DEVICE_DIRECTORY: u64 = 1 << 7;
 pub const HEADER_LEN: usize = 19;
 pub const MAX_PAYLOAD: usize = 256 * 1024;
 pub const MAX_FRAME: usize = HEADER_LEN + MAX_PAYLOAD;

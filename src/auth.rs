@@ -2,7 +2,8 @@
 //!
 //! These messages intentionally omit Debug because they carry credentials.
 use crate::{
-    CAP_CHANGE_PASSWORD, CAP_PASSWORD_RESET, CAP_TWO_FACTOR, CAP_TWO_FACTOR_MANAGE, Message,
+    CAP_CHANGE_PASSWORD, CAP_DEVICE_DIRECTORY, CAP_PASSWORD_RESET, CAP_TWO_FACTOR,
+    CAP_TWO_FACTOR_MANAGE, Message,
 };
 use serde::{Deserialize, Serialize};
 
@@ -72,6 +73,19 @@ pub enum Operation {
         code: String,
         action: TwoFactorAction,
     },
+    EnrollDevice {
+        session: String,
+        device_id: [u8; 16],
+        public_key: [u8; 32],
+        signature: Vec<u8>,
+    },
+    ListDevices {
+        session: String,
+    },
+    RevokeDevice {
+        session: String,
+        device_id: [u8; 16],
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -89,6 +103,9 @@ impl Operation {
             | Self::ConfirmTwoFactor { .. }
             | Self::CompleteTwoFactorSignIn { .. } => CAP_TWO_FACTOR,
             Self::GetTwoFactorStatus { .. } | Self::ManageTwoFactor { .. } => CAP_TWO_FACTOR_MANAGE,
+            Self::EnrollDevice { .. } | Self::ListDevices { .. } | Self::RevokeDevice { .. } => {
+                CAP_DEVICE_DIRECTORY
+            }
             _ => 0,
         }
     }
@@ -140,6 +157,11 @@ pub enum Outcome {
         backup_codes_left: u32,
     },
     TwoFactorDisabled,
+    DeviceEnrolled,
+    DeviceDirectory {
+        devices: Vec<DeviceRecord>,
+    },
+    DeviceRevoked,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -153,4 +175,30 @@ pub enum AuthError {
     SessionExpired,
     Unavailable,
     TwoFactorAlreadyEnabled,
+    DeviceKeyConflict,
+    DeviceRevoked,
+    DeviceLimit,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DeviceRecord {
+    pub device_id: [u8; 16],
+    pub public_key: [u8; 32],
+    pub revoked: bool,
+}
+
+pub fn device_enrollment_message(
+    account: &str,
+    session: &str,
+    id: &[u8; 16],
+    key: &[u8; 32],
+) -> Vec<u8> {
+    let mut bytes = b"vox/account/device-enrollment/v1\0".to_vec();
+    bytes.extend_from_slice(&(account.len() as u64).to_be_bytes());
+    bytes.extend_from_slice(account.as_bytes());
+    bytes.extend_from_slice(&(session.len() as u64).to_be_bytes());
+    bytes.extend_from_slice(session.as_bytes());
+    bytes.extend_from_slice(id);
+    bytes.extend_from_slice(key);
+    bytes
 }

@@ -131,3 +131,41 @@ fn two_factor_management_negotiates_separately() {
             == request
     );
 }
+#[test]
+fn device_enrollment_transcript_binds_account_session_id_and_key() {
+    use vox_protocol::{CAP_DEVICE_DIRECTORY, auth::device_enrollment_message};
+    let id = [1; 16];
+    let key = [2; 32];
+    let message = device_enrollment_message("Vox", "session-a", &id, &key);
+    assert_ne!(
+        message,
+        device_enrollment_message("Vox", "session-b", &id, &key)
+    );
+    assert_ne!(
+        message,
+        device_enrollment_message("Other", "session-a", &id, &key)
+    );
+    assert_ne!(
+        message,
+        device_enrollment_message("Vox", "session-a", &[2; 16], &key)
+    );
+    assert_ne!(
+        message,
+        device_enrollment_message("Vox", "session-a", &id, &[3; 32])
+    );
+    let operation = Operation::EnrollDevice {
+        session: "synthetic".into(),
+        device_id: id,
+        public_key: key,
+        signature: vec![0; 64],
+    };
+    assert_eq!(operation.required_capability(), CAP_DEVICE_DIRECTORY);
+    let request = AuthRequest { operation };
+    assert!(
+        decode(&encode(0, 4, &request).unwrap())
+            .unwrap()
+            .body::<AuthRequest>()
+            .unwrap()
+            == request
+    );
+}
