@@ -103,3 +103,31 @@ fn two_factor_challenge_round_trips_without_a_session() {
             == reply
     );
 }
+#[test]
+fn two_factor_management_negotiates_separately() {
+    use vox_protocol::{CAP_TWO_FACTOR, CAP_TWO_FACTOR_MANAGE, auth::TwoFactorAction};
+    let operation = Operation::ManageTwoFactor {
+        session: "synthetic session".into(),
+        password: "synthetic password".into(),
+        code: "123456".into(),
+        action: TwoFactorAction::ReplaceBackupCodes,
+    };
+    assert_eq!(operation.required_capability(), CAP_TWO_FACTOR_MANAGE);
+    let old = CAP_FRAME_E2EE | CAP_AUTH | CAP_TWO_FACTOR;
+    let supported = old | CAP_TWO_FACTOR_MANAGE;
+    let hello = ClientHello {
+        min_minor: 0,
+        max_minor: 0,
+        capabilities: supported,
+        required: supported,
+    };
+    assert!(negotiate_with(MAJOR, &hello, old).is_err());
+    let request = AuthRequest { operation };
+    assert!(
+        decode(&encode(0, 4, &request).unwrap())
+            .unwrap()
+            .body::<AuthRequest>()
+            .unwrap()
+            == request
+    );
+}
